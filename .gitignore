@@ -1,9 +1,0 @@
-.idea/
-venv/
-src/nlp_parse_cv/output/
-__pycache__
-.DS_Store
-.interpreter
-src/nlp_parse_cv/model/
-.env
-misc/output
