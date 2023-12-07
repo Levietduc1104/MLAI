@@ -199,7 +199,7 @@ class CvParsing:
                       encoding='utf-8') as file:
                 writer = csv.writer(file)
                 writer.writerow([file_name, skills_str, experiences_str])
-        print(data_skills)
+
         return data_skills
 
 

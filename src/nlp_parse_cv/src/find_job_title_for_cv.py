@@ -32,7 +32,9 @@ class FindingBestTitleForCV:
         self.data_skills = {}
         self.job_categories = {}
         self.matched_jobs = {}
-        self.candidates_skills = "/Users/levietduc/Documents/Documents - Le’s MacBook Pro/Learning/MLAI/src/nlp_parse_cv/output/output.csv"
+        # self.candidates_skills = "/Users/levietduc/Documents/Documents - Le’s MacBook Pro/Learning/MLAI/src/nlp_parse_cv/output/output.csv"
+        candidates_skills_initiate: CvParser = CvParser
+        self.candidates_skills = candidates_skills_initiate.process_cvs_in_folder()
 
     def load_job_categories(self):
         """
@@ -70,7 +72,6 @@ class FindingBestTitleForCV:
         """
         # Convert CV skills to lowercase and strip extra spaces
         cv_skills = self.preprocess_skills(cv_skills)
-
         scores = Counter()
         for title, skills in self.job_categories.items():
             # Convert job category skills to lowercase and strip extra spaces

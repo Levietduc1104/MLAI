@@ -1,0 +1,9 @@
+gitpython
+openpyxl
+seaborn
+pytest
+pytest-html
+coverage
+pdfgen
+reportlab
+spacy
