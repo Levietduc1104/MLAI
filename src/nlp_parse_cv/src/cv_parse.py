@@ -173,7 +173,7 @@ class CvParsing:
             - The method assumes a specific structure for the input data and relies on the 'extract_results' method for processing each CV.
         """
         data_skills = {}
-        candidate_skills = []
+        # candidate_skills = []
 
         # Get files
         all_files = os.listdir(self.folder_path)
@@ -192,14 +192,14 @@ class CvParsing:
                 continue
             # Extract skills and experiences from the CV
             skills_str, experiences_str = self.extract_results(file_path)
-            candidate_skills.append(skills_str)
-            data_skills[file_name] = candidate_skills
+            individual_skills = skills_str.split(', ')
+            # candidate_skills.append(skills_str)
+            data_skills[file_name] = individual_skills
         # Write the data to CSV
             with open(self.output_csv, mode='a', newline='',
                       encoding='utf-8') as file:
                 writer = csv.writer(file)
                 writer.writerow([file_name, skills_str, experiences_str])
-
+        # print(data_skills)
         return data_skills
-
 

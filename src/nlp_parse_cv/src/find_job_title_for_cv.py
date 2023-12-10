@@ -1,10 +1,7 @@
 import json
 from collections import Counter
-import nlp_parse_cv.src.cv_parse
-
-
-CvParser = nlp_parse_cv.src.cv_parse.CvParsing
-
+from  cv_parse import CvParsing as CVP
+import pandas as pd
 
 class FindingBestTitleForCV:
     """
@@ -32,25 +29,25 @@ class FindingBestTitleForCV:
         self.data_skills = {}
         self.job_categories = {}
         self.matched_jobs = {}
-        # self.candidates_skills = "/Users/levietduc/Documents/Documents - Le’s MacBook Pro/Learning/MLAI/src/nlp_parse_cv/output/output.csv"
-        candidates_skills_initiate: CvParser = CvParser
+        candidates_skills_initiate: CVP = CVP()
         self.candidates_skills = candidates_skills_initiate.process_cvs_in_folder()
 
-    def load_job_categories(self):
+    @staticmethod
+    def load_job_categories():
         """
         Loads job categories and their associated skills from a JSON file.
-
         The job categories and skills are stored in the 'job_categories' attribute of the class.
         The path to the JSON file is hardcoded in the method.
         """
-        self.job_categories_path = "/Users/levietduc/Documents/Documents - Le’s MacBook Pro/Learning/MLAI/misc/job_categories.json"
-        with open(self.job_categories_path, 'r') as f:
-            self.job_categories = json.load(f)
+        job_categories_path = "/Users/levietduc/Documents/Documents - Le’s MacBook Pro/Learning/MLAI/misc/job_categories.json"
+        with open(job_categories_path, 'r') as f:
+            job_categories = json.load(f)
+        print(job_categories)
+        return job_categories
 
     def preprocess_skills(self, skills):
         """
         Processes a list of skills by converting them to lowercase and stripping extra spaces.
-
         Parameters:
             skills (list of str): A list of skills to preprocess.
 
@@ -73,7 +70,7 @@ class FindingBestTitleForCV:
         # Convert CV skills to lowercase and strip extra spaces
         cv_skills = self.preprocess_skills(cv_skills)
         scores = Counter()
-        for title, skills in self.job_categories.items():
+        for title, skills in self.load_job_categories().items():
             # Convert job category skills to lowercase and strip extra spaces
             skills = self.preprocess_skills(skills)
 
@@ -91,20 +88,34 @@ class FindingBestTitleForCV:
             job categories, and determines the best
         matching job titles. The results are stored in the 'matched_jobs' attribute.
         """
-        for filename, skills in self.data_skills.items():
+        matched_jobs = {}
+        for filename, skills in self.candidates_skills.items():
             scores = self.calculate_similarity_scores(skills)
             # Sort the job titles based on scores in descending order
             best_jobs = scores.most_common()
-            self.matched_jobs[filename] = best_jobs
+            matched_jobs[filename] = best_jobs
+        return matched_jobs
 
     def print_matched_jobs(self):
+
         """
         Prints the matched job titles and their scores for each CV.
 
         This method iterates over the 'matched_jobs' attribute and prints the best matching job titles for each CV.
         """
-        for filename, jobs in self.matched_jobs.items():
+        candidate_title_scoring = []
+        match_skills_with_title = self.match_skills_with_titles()
+        for filename, jobs in match_skills_with_title.items():
             print(f'CV: {filename}')
+            print("jobs", jobs)
             for job, score in jobs:
                 print(f'{job}: {score}')
+            candidate_title_scoring.append((filename, jobs))
             print('---' * 10)
+        df = pd.DataFrame(candidate_title_scoring, columns=['Candidate', 'Job score'])
+        csv_filename = 'candidate_scoring.csv'
+        df.to_csv(csv_filename, index=False)
+
+find_cv = FindingBestTitleForCV()
+
+find_cv.print_matched_jobs()
