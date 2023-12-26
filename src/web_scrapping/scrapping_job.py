@@ -50,9 +50,8 @@ from selenium.webdriver.common.keys import Keys
 
 # Locate elements on page and throw error if they do not exist
 from selenium.common.exceptions import NoSuchElementException
+import pandas as pd
 
-
-driver = webdriver.Chrome()
 # Allows you to cusotmize: ingonito mode, maximize window size, headless browser, disable certain features, etc
 option = webdriver.ChromeOptions()
 
@@ -65,32 +64,19 @@ option.add_argument("--incognito")
 # Creating a Chrome WebDriver instance with these options
 driver = webdriver.Chrome(options=option)
 
-
-
-# Define job and location search keywords
-job_search_keyword = ['Data+Scientist']
-
-# Define Locations of Interest
-location_search_keyword = ['Munich']
-
 # Finding location, position, radius=35 miles, sort by date and starting page
-paginaton_url = 'https://de.indeed.com/jobs?q={}&l={}&radius=35&filter=0&sort=date&start={}'
+paginaton_url = 'https://de.indeed.com/jobs?q={}&l={}&radius=35&filter=0&lang=en&sort=date&start={}'
 
 # print(paginaton_url)
 
 start = time.time()
-
 
 job_ = 'Data+Engineer'
 location = 'Munich'
 
 driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=option)
 
-
 driver.get(paginaton_url.format(job_, location, 0))
-
-# t = ScrapeThread(url_)
-# t.start()
 
 sleep(randint(2, 6))
 
@@ -100,88 +86,67 @@ p=driver.find_element(By.CLASS_NAME,'jobsearch-JobCountAndSortPane-jobCount').te
 max_iter_pgs=int(p.split(' ')[0])//15
 
 
-# driver.quit() # Closing the browser we opened
+job_lst = []
+job_description_list_href = []
 
+# job_description_list =  []
+job_title = []
+job_location = []
+job_data = []
+salary_list = []
 
-# end = time.time()
+job_description_list = []
 
-# print(end - start,'seconds to complete action!')
-# print('-----------------------')
-# print('Max Iterable Pages for this search:',max_iter_pgs)
+option = webdriver.ChromeOptions()
+# Add any necessary Chrome options here
 
+driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=option)
 
-job_lst=[]
-job_description_list_href=[]
-
-# job_description_list = []
-salary_list=[]
-
-driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()),
-                         options=option)
 sleep(randint(2, 6))
 
 job_description_list = []
-for i in range(0,max_iter_pgs):
-    driver.get(paginaton_url.format(job_,location,i*10))
+job_description = None
+company_name = None
 
+for i in range(2):  # Loop through the first two pages
+    driver.get(paginaton_url.format(job_, location, i * 10))
+    time.sleep(randint(2, 4))
 
-    sleep(randint(2, 4))
+    # Collecting all job links
+    job_page = driver.find_element(By.ID, "mosaic-jobResults")
+    jobs = job_page.find_elements(By.CLASS_NAME, "job_seen_beacon")
+    job_links = [job.find_element(By.CSS_SELECTOR, "a").get_attribute('href') for job in jobs]
 
-    job_page = driver.find_element(By.ID,"mosaic-jobResults")
-    jobs = job_page.find_elements(By.CLASS_NAME,"job_seen_beacon") # return a list
-
-    for jj in jobs:
-        wait = WebDriverWait(driver, 10)
-        element = wait.until(EC.element_to_be_clickable((By.CLASS_NAME, 'jobTitle')))
-        element.click()
-
-        # Help to load page so we can find and extract data
-        sleep(randint(3, 5))
-
+    for job_link in job_links:
+        # Navigate to job link
+        driver.get(job_link)
+        time.sleep(randint(3, 5))
+        print(job_link)
+        # Process job description
         try:
-            job_description_list.append(driver.find_element(By.ID,"jobDescriptionText").text)
-            print(job_description_list)
-        except:
+            wait = WebDriverWait(driver, 10)
+            job_title = wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "h1"))).text
+            job_description = driver.find_element(By.ID, "jobDescriptionText").text
+            company_name_element = driver.find_element(By.XPATH, "//div[@data-company-name='true']/span/a")
+            company_name = company_name_element.text
 
+            company_location_element = driver.find_element(By.XPATH, "//div[@data-testid='inlineHeader-companyLocation']/div")
+            company_location = company_location_element.text
+            job_description_list.append((job_title, job_description, company_name, company_location, job_link))
+            # print(company_location)
+
+
+        except Exception as e:
+            print(f"Error accessing job description: {e}")
             job_description_list.append(None)
 
+        # Navigate back to the job list page
+        driver.get(paginaton_url.format(job_, location, i * 10))
+        time.sleep(randint(2, 4))
+df = pd.DataFrame(job_description_list, columns=['Job Title', 'Job Description', 'Company Name', 'Location', 'Job Link'])
+csv_filename = 'job_listings.csv'
+df.to_csv(csv_filename, index=False)
 
-driver.quit()
-# job_description_list[-17:-1]
-
-
-end = time.time()
-
-print(end - start,'seconds to complete Query!')
-
-
-driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()),
-                         options=option)
-sleep(randint(2, 6))
-
-
-for i in range(0,max_iter_pgs):
-    driver.get(paginaton_url.format(job_,location,i*10))
-
-    sleep(randint(2, 4))
-
-    job_page = driver.find_element(By.ID,"mosaic-jobResults")
-    jobs = job_page.find_elements(By.CLASS_NAME,"job_seen_beacon") # return a list
-
-    for jj in jobs:
-        job_title = jj.find_element(By.CLASS_NAME,"jobTitle")
-
-
-        # Click the job element to get the description
-        job_title.click()
-
-        # Help to load page so we can find and extract data
-        sleep(randint(3, 5))
-
-        try:
-            job_description_list.append(driver.find_element(By.ID,"jobDescriptionText").text)
-
-        except:
-
-            job_description_list.append(None)
+print(f"Data saved to {csv_filename}")
+print(job_description_list)
 driver.quit()

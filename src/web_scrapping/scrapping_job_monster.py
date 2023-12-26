@@ -1,6 +1,6 @@
 # --------- import necessary modules -------
 # For webscraping
-from bs4 import BeautifulSoup
+# from bs4 import BeautifulSoup
 
 # Parsing and creating xml data
 from lxml import etree as et
@@ -65,14 +65,15 @@ option.add_argument("--incognito")
 driver = webdriver.Chrome(options=option)
 
 # Finding location, position, radius=35 miles, sort by date and starting page
-paginaton_url = 'https://de.indeed.com/jobs?q={}&l={}&radius=35&filter=0&lang=en&sort=date&start={}'
 
+
+paginaton_url = 'https://www.stepstone.de/jobs/{}?action=facet_selected%3bdetectedLanguages%3ben&fdl=en'
 # print(paginaton_url)
 
 start = time.time()
 
-job_ = 'Data+Engineer'
-location = 'Munich'
+job_ = 'software-developer'
+location = ''
 
 driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install()), options=option)
 
@@ -80,11 +81,11 @@ driver.get(paginaton_url.format(job_, location, 0))
 
 sleep(randint(2, 6))
 
-p=driver.find_element(By.CLASS_NAME,'jobsearch-JobCountAndSortPane-jobCount').text
+p=driver.find_element(By.CLASS_NAME,'res-vurnku.at-facet-header-total-results').text
 
 # Max number of pages for this search! There is a caveat described soon
-max_iter_pgs=int(p.split(' ')[0])//15
-
+max_iter_pgs=int(p.split(' ')[0])//25
+print(max_iter_pgs)
 
 job_lst = []
 job_description_list_href = []
@@ -94,7 +95,7 @@ job_title = []
 job_location = []
 job_data = []
 salary_list = []
-
+job_page = None
 job_description_list = []
 
 option = webdriver.ChromeOptions()
@@ -104,49 +105,58 @@ driver = webdriver.Chrome(service=ChromeService(ChromeDriverManager().install())
 
 sleep(randint(2, 6))
 
-job_description_list = []
-job_description = None
-company_name = None
+job_description_list: list  = []
+job_description: list = None
+company_name:list = None
 
-for i in range(2):  # Loop through the first two pages
+for i in range(4):  # Loop through the first two pages
     driver.get(paginaton_url.format(job_, location, i * 10))
     time.sleep(randint(2, 4))
-
     # Collecting all job links
-    job_page = driver.find_element(By.ID, "mosaic-jobResults")
-    jobs = job_page.find_elements(By.CLASS_NAME, "job_seen_beacon")
-    job_links = [job.find_element(By.CSS_SELECTOR, "a").get_attribute('href') for job in jobs]
+    # Wait up to 10 seconds for the jobs container to become available
+    job_page = driver.find_element(By.CLASS_NAME, "res-81xrsn")
 
+    # Find all job elements
+    jobs = job_page.find_elements(By.CLASS_NAME, "res-urswt")
+    job_links = [job.find_element(By.CSS_SELECTOR, "a.res-y456gn").get_attribute('href') for job in jobs]
     for job_link in job_links:
-        # Navigate to job link
-        driver.get(job_link)
-        time.sleep(randint(3, 5))
-        print(job_link)
-        # Process job description
-        try:
-            wait = WebDriverWait(driver, 10)
-            job_title = wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "h1"))).text
-            job_description = driver.find_element(By.ID, "jobDescriptionText").text
-            company_name_element = driver.find_element(By.XPATH, "//div[@data-company-name='true']/span/a")
-            company_name = company_name_element.text
 
-            company_location_element = driver.find_element(By.XPATH, "//div[@data-testid='inlineHeader-companyLocation']/div")
-            company_location = company_location_element.text
-            job_description_list.append((job_title, job_description, company_name, company_location, job_link))
-            # print(company_location)
+     driver.get(job_link)
+     time.sleep(randint(3, 5))
 
+     try:
+          wait = WebDriverWait(driver, 10)
+          job_title = wait.until(EC.presence_of_element_located((By.CLASS_NAME, "listing-content-provider-bewwo"))).text
+          job_description = driver.find_element(By.CLASS_NAME, "js-app-ld-ContentBlock").text
+          company_name_element = driver.find_element(By.CLASS_NAME, "listing-content-provider-lxa6ue")
+          company_name = company_name_element.text
+          job_location_element = driver.find_element(By.CLASS_NAME, "listing-content-provider-1whr5zf")
+          company_location = job_location_element.text
+          job_desc_container = driver.find_element(By.CLASS_NAME, 'listing-content-provider-i9ybor')
 
-        except Exception as e:
-            print(f"Error accessing job description: {e}")
-            job_description_list.append(None)
+          # Within this container, find all the div elements that might contain parts of the job description
+          job_desc_elements = wait.until(EC.presence_of_all_elements_located((By.CLASS_NAME, "listing-content-provider-14ydav7")))
 
-        # Navigate back to the job list page
-        driver.get(paginaton_url.format(job_, location, i * 10))
-        time.sleep(randint(2, 4))
+          # Initialize a variable to hold the full job description
+          job_description_full = ''
+
+          # Iterate through the found elements and concatenate their text
+          for element in job_desc_elements:
+               job_description_full += element.text + '\n'
+
+          # Print the full job description
+          job_description_list.append((job_title, job_description_full, company_name, company_location, job_link))
+          print("-------------------------------------------------")
+          print(job_description_full.strip())  # .strip() to remove leading/trailing whitespace
+
+     except Exception as e:
+
+          print(f"Error accessing job description: {e}")
+          job_description_list.append(None)
 df = pd.DataFrame(job_description_list, columns=['Job Title', 'Job Description', 'Company Name', 'Location', 'Job Link'])
-csv_filename = 'job_listings.csv'
+csv_filename = 'job_listings_monster.csv'
 df.to_csv(csv_filename, index=False)
-
 print(f"Data saved to {csv_filename}")
 print(job_description_list)
 driver.quit()
+

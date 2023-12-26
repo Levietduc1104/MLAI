@@ -42,7 +42,7 @@ class FindingBestTitleForCV:
         job_categories_path = "/Users/levietduc/Documents/Documents - Le’s MacBook Pro/Learning/MLAI/misc/job_categories.json"
         with open(job_categories_path, 'r') as f:
             job_categories = json.load(f)
-        print(job_categories)
+        # print(job_categories)
         return job_categories
 
     def preprocess_skills(self, skills):
