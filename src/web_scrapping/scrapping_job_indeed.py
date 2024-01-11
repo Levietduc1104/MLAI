@@ -134,8 +134,6 @@ for i in range(2):  # Loop through the first two pages
             company_location = company_location_element.text
             job_description_list.append((job_title, job_description, company_name, company_location, job_link))
             # print(company_location)
-
-
         except Exception as e:
             print(f"Error accessing job description: {e}")
             job_description_list.append(None)

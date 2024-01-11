@@ -9,8 +9,12 @@ from tqdm import tqdm
 from spacy.util import filter_spans
 from sklearn.model_selection import train_test_split
 import sys, fitz
-
-
+import pytesseract
+from pdf2image import convert_from_path
+from PIL import Image
+import os
+import PyPDF2
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
 class CvParsing:
     """
         This class is designed for parsing and processing CVs (Curriculum Vitae) for scanning and analysis.
@@ -127,10 +131,14 @@ class CvParsing:
             This method relies on a specific directory structure and file paths as defined in the method. Ensure that the
             necessary model and training data files are available at the specified locations.
         """
-        training_data = CvParsing.read_training_data()
+        training_data = self.read_training_data()
         skills = []
         experiences = []
+        cv_text = []
+        text = self.extract_text(filepath)
+        print(text)
         # path_csv = "/Users/levietduc/Documents/Documents - Le’s MacBook Pro/Learning/MLAI/src/nlp_parse_cv/output/output.csv"
+        # Load the trained SpaCy model
         train, test = train_test_split(training_data, test_size=0.3)
         file = open('/Users/levietduc/Documents/Documents - Le’s MacBook Pro/Learning/MLAI/src/nlp_parse_cv/model/JdModel/train_file.txt', 'w')
         db = self.get_spacy_doc(file, train)
@@ -139,10 +147,11 @@ class CvParsing:
         db.to_disk("/Users/levietduc/Documents/Documents - Le’s MacBook Pro/Learning/MLAI/src/nlp_parse_cv/model/JdModel/test_data.spacy")
         file.close()
         nlp = spacy.load("/Users/levietduc/Documents/Documents - Le’s MacBook Pro/Learning/MLAI/src/nlp_parse_cv/model/JdModel/output/model-best")
-        doc = fitz.open(filepath)
-        text = ""
-        for page in doc:
-            text = text+str(page.get_text())
+        # doc = fitz.open(filepath)
+        # text = ""
+        # for page in doc:
+        #     text = text+str(page.get_text())
+
         doc = nlp(text)
         for ent in doc.ents:
             # Log to console
@@ -203,3 +212,27 @@ class CvParsing:
         # print(data_skills)
         return data_skills
 
+
+    def extract_text(self,file_path):
+        # text = ''
+
+        # # Try extracting text using PyPDF2
+        # try:
+        #     with open(file_path, 'rb') as file:
+        #         reader = PyPDF2.PdfFileReader(file)
+        #         for page in range(reader.numPages):
+        #             text += reader.getPage(page).extract_text()
+        # except Exception as e:
+        #     print("Error reading PDF with PyPDF2:", e)
+        #     text = ''
+
+        # # Check the length of the extracted text
+        # if len(text) < 300:
+            # If less than 300 letters, use OCR
+        pages = convert_from_path(file_path, 300)
+        ocr_text = ''
+        for page_data in pages:
+            ocr_text += pytesseract.image_to_string(page_data)
+        return ocr_text
+
+        # return text
